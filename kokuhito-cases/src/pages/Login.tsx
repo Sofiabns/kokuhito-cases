@@ -10,7 +10,7 @@ const Login = () => {
   const navigate = useNavigate();
 
   // Senha padrão (pode ser alterada no código)
-  const CORRECT_PASSWORD = "kokuhitorh123";
+  const CORRECT_PASSWORD = "kokuhito123";
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,7 +20,7 @@ const Login = () => {
       if (password === CORRECT_PASSWORD) {
         localStorage.setItem("kokuhito-auth", "true");
         toast({
-          title: "Bem-vindo!",
+          title: "Bem-vindo! 💙",
           description: "Login realizado com sucesso",
         });
         navigate("/");

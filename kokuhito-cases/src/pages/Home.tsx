@@ -63,11 +63,9 @@ const Home = () => {
     <div className="space-y-8 max-w-7xl mx-auto">
       {/* Welcome Section */}
       <div className="text-center space-y-4">
-        <h1 className="text-4xl md:text-5xl font-poppins font-bold text-white">
-          Bem-vindo(a) Kokuhito!
+        <h1 className="text-4xl md:text-5xl font-poppins font-bold text-foreground">
+          Bem vindo(a) Kokuhito
         </h1>
-        <p className="text-lg text-muted-foreground font-nunito max-w-2xl mx-auto">
-        </p>
       </div>
 
       {/* Stats Grid */}
