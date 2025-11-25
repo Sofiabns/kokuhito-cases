@@ -10,8 +10,8 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
-  // Senha padrão (pode ser alterada no código)
-  const CORRECT_PASSWORD = "kokuhitorh123";
+  // Senha configurada via variável de ambiente
+  const CORRECT_PASSWORD = import.meta.env.VITE_APP_PASSWORD;
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
