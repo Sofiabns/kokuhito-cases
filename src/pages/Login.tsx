@@ -47,7 +47,7 @@ const Login = () => {
             Painel Kokuhito
           </h1>
           <p className="text-muted-foreground font-nunito">
-            Digite a senha para acessar
+            
           </p>
         </div>
 
