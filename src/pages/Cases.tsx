@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -51,13 +51,15 @@ interface Case {
 }
 
 const Cases = () => {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [cases, setCases] = useState<Case[]>([]);
   const [people, setPeople] = useState<Person[]>([]);
   const [selectedCase, setSelectedCase] = useState<Case | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [editForm, setEditForm] = useState<Partial<Case>>({});
+  const [activeTab, setActiveTab] = useState("pending");
+  const caseIdRef = useRef<string | null>(null);
 
   const fetchCases = async () => {
     const { data, error } = await supabase
@@ -106,14 +108,24 @@ const Cases = () => {
     fetchPeople();
   }, []);
 
-  // Open case from URL parameter
+  // Handle case navigation from URL
   useEffect(() => {
     const caseId = searchParams.get("id");
+    
     if (caseId && cases.length > 0) {
       const caseToOpen = cases.find((c) => c.id === caseId);
-      if (caseToOpen) {
+      if (caseToOpen && caseIdRef.current !== caseId) {
+        // Automatically switch to the appropriate tab
+        setActiveTab(caseToOpen.is_resolved ? "resolved" : "pending");
+        
+        // Open the case modal
         openCaseModal(caseToOpen);
+        caseIdRef.current = caseId;
       }
+    } else if (!caseId) {
+      // Reset when no case ID in URL
+      setSelectedCase(null);
+      caseIdRef.current = null;
     }
   }, [searchParams, cases]);
 
@@ -136,6 +148,9 @@ const Cases = () => {
       });
       fetchCases();
       setSelectedCase(null);
+      
+      // Update URL to remove case ID
+      setSearchParams({});
     }
   };
 
@@ -161,6 +176,9 @@ const Cases = () => {
       fetchCases();
       setIsEditing(false);
       setSelectedCase(null);
+      
+      // Update URL to remove case ID
+      setSearchParams({});
     }
   };
 
@@ -186,6 +204,9 @@ const Cases = () => {
       fetchCases();
       setIsDeleting(false);
       setSelectedCase(null);
+      
+      // Update URL to remove case ID
+      setSearchParams({});
     }
   };
 
@@ -241,7 +262,7 @@ const Cases = () => {
         </p>
       </div>
 
-      <Tabs defaultValue="pending" className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full max-w-md grid-cols-2 h-12 rounded-2xl">
           <TabsTrigger value="pending" className="rounded-xl font-poppins">
             Pendentes ({pendingCases.length})
@@ -283,7 +304,10 @@ const Cases = () => {
       </Tabs>
 
       {/* Case Detail Modal */}
-      <Dialog open={!!selectedCase && !isEditing} onOpenChange={() => setSelectedCase(null)}>
+      <Dialog open={!!selectedCase && !isEditing} onOpenChange={() => {
+        setSelectedCase(null);
+        setSearchParams({});
+      }}>
         <DialogContent className="max-w-2xl rounded-3xl">
           <DialogHeader>
             <DialogTitle className="font-poppins text-2xl">
