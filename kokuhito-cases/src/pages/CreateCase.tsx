@@ -91,7 +91,7 @@ const CreateCase = () => {
       });
     } else {
       toast({
-        title: "Prontinho! Caso salvo 💙",
+        title: "Caso salvo",
         description: "O caso foi registrado com sucesso",
       });
       navigate("/casos");
@@ -123,7 +123,7 @@ const CreateCase = () => {
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Requester */}
           <div className="space-y-2">
-            <Label className="font-poppins">Quem está registrando? *</Label>
+            <Label className="font-poppins">Quem está sendo consultado?</Label>
             <Select
               value={formData.requester_id}
               onValueChange={(value) =>
@@ -145,7 +145,7 @@ const CreateCase = () => {
 
           {/* Related Person */}
           <div className="space-y-2">
-            <Label className="font-poppins">Pessoa relacionada *</Label>
+            <Label className="font-poppins">Pessoa relacionada</Label>
             <Select
               value={formData.related_person_id}
               onValueChange={(value) =>
@@ -167,7 +167,7 @@ const CreateCase = () => {
 
           {/* Vision 1 */}
           <div className="space-y-2">
-            <Label className="font-poppins">Visão 1 (opcional)</Label>
+            <Label className="font-poppins">Visão 1</Label>
             <Input
               placeholder="Descreva a primeira visão..."
               value={formData.vision_1}
@@ -180,7 +180,7 @@ const CreateCase = () => {
 
           {/* Vision 2 */}
           <div className="space-y-2">
-            <Label className="font-poppins">Visão 2 (opcional)</Label>
+            <Label className="font-poppins">Visão 2</Label>
             <Input
               placeholder="Descreva a segunda visão..."
               value={formData.vision_2}
@@ -193,7 +193,7 @@ const CreateCase = () => {
 
           {/* Resolution Comment */}
           <div className="space-y-2">
-            <Label className="font-poppins">Resolução / Comentário (opcional)</Label>
+            <Label className="font-poppins">Resolução / Comentário</Label>
             <Textarea
               placeholder="Adicione comentários ou resolução..."
               value={formData.resolution_comment}
@@ -225,7 +225,7 @@ const CreateCase = () => {
               className="flex-1 h-12 rounded-2xl font-poppins font-semibold bg-gradient-primary hover:opacity-90"
               disabled={isLoading}
             >
-              {isLoading ? "Salvando..." : "Salvar Caso ✨"}
+              {isLoading ? "Salvando..." : "Salvar Caso"}
             </Button>
             <Button
               type="button"

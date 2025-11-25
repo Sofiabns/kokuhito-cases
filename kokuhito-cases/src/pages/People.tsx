@@ -1,17 +1,9 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -28,9 +20,17 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { UserCircle2, Edit, Trash2, Plus, Search, FileText } from "lucide-react";
+import { UserCircle2, Edit, Trash2, Plus, Search, Clock, CheckCircle, XCircle, Eye } from "lucide-react";
+
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -50,12 +50,12 @@ interface Case {
   resolution_comment: string | null;
   is_resolved: boolean;
   created_at: string;
+  updated_at: string;
   requester?: Person;
   related_person?: Person;
 }
 
 const People = () => {
-  const navigate = useNavigate();
   const [people, setPeople] = useState<Person[]>([]);
   const [filteredPeople, setFilteredPeople] = useState<Person[]>([]);
   const [selectedPerson, setSelectedPerson] = useState<Person | null>(null);
@@ -63,8 +63,9 @@ const People = () => {
   const [isAdding, setIsAdding] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isCasesModalOpen, setIsCasesModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [sortOrder, setSortOrder] = useState<"most" | "least">("most");
+  const [sortBy, setSortBy] = useState("name");
   const [editForm, setEditForm] = useState({ name: "" });
 
   const fetchPeople = async () => {
@@ -110,15 +111,17 @@ const People = () => {
       );
     }
 
-    // Sort by case count
-    filtered = [...filtered].sort((a, b) => {
-      const countA = a.caseCount || 0;
-      const countB = b.caseCount || 0;
-      return sortOrder === "most" ? countB - countA : countA - countB;
-    });
+    // Apply sorting
+    if (sortBy === "name") {
+      filtered = [...filtered].sort((a, b) => a.name.localeCompare(b.name));
+    } else if (sortBy === "most-cases") {
+      filtered = [...filtered].sort((a, b) => (b.caseCount || 0) - (a.caseCount || 0));
+    } else if (sortBy === "least-cases") {
+      filtered = [...filtered].sort((a, b) => (a.caseCount || 0) - (b.caseCount || 0));
+    }
 
     setFilteredPeople(filtered);
-  }, [searchTerm, sortOrder, people]);
+  }, [searchTerm, sortBy, people]);
 
   const handleAdd = async () => {
     if (!editForm.name.trim()) {
@@ -199,40 +202,55 @@ const People = () => {
     }
   };
 
-  const openPersonModal = async (person: Person) => {
+  const openPersonCases = async (person: Person) => {
     setSelectedPerson(person);
     setEditForm({ name: person.name });
     
-    // Fetch cases related to this person
-    const { data: casesData } = await supabase
+    // Fetch cases for this person
+    const { data, error } = await supabase
       .from("cases")
       .select("*")
       .or(`requester_id.eq.${person.id},related_person_id.eq.${person.id}`)
       .order("created_at", { ascending: false });
 
-    if (casesData) {
-      // Fetch all people for names
-      const peopleIds = new Set<string>();
-      casesData.forEach((c) => {
-        peopleIds.add(c.requester_id);
-        peopleIds.add(c.related_person_id);
+    if (error) {
+      toast({
+        title: "Erro ao carregar casos",
+        description: error.message,
+        variant: "destructive",
       });
-
-      const { data: peopleData } = await supabase
-        .from("people")
-        .select("*")
-        .in("id", Array.from(peopleIds));
-
-      const peopleMap = new Map(peopleData?.map((p) => [p.id, p]) || []);
-
-      const casesWithNames = casesData.map((c) => ({
-        ...c,
-        requester: peopleMap.get(c.requester_id),
-        related_person: peopleMap.get(c.related_person_id),
-      }));
-
-      setPersonCases(casesWithNames);
+      return;
     }
+
+    // Fetch person names for cases
+    const peopleIds = new Set<string>();
+    data?.forEach((c) => {
+      peopleIds.add(c.requester_id);
+      peopleIds.add(c.related_person_id);
+    });
+
+    const { data: peopleData } = await supabase
+      .from("people")
+      .select("*")
+      .in("id", Array.from(peopleIds));
+
+    const peopleMap = new Map(peopleData?.map((p) => [p.id, p]) || []);
+
+    const casesWithNames = data?.map((c) => ({
+      ...c,
+      requester: peopleMap.get(c.requester_id),
+      related_person: peopleMap.get(c.related_person_id),
+    }));
+
+    setPersonCases(casesWithNames || []);
+    setIsCasesModalOpen(true);
+  };
+
+  const closePersonCases = () => {
+    setIsCasesModalOpen(false);
+    setSelectedPerson(null);
+    setPersonCases([]);
+    setEditForm({ name: "" });
   };
 
   const getInitials = (name: string) => {
@@ -242,6 +260,14 @@ const People = () => {
       .join("")
       .toUpperCase()
       .slice(0, 2);
+  };
+
+  const getCaseStatusIcon = (isResolved: boolean) => {
+    return isResolved ? (
+      <CheckCircle className="w-4 h-4 text-green-500" />
+    ) : (
+      <Clock className="w-4 h-4 text-orange-500" />
+    );
   };
 
   return (
@@ -267,14 +293,15 @@ const People = () => {
           </div>
           <div className="flex gap-4 items-center">
             <div className="flex items-center gap-2">
-              <Label className="font-nunito whitespace-nowrap">Ordenar:</Label>
-              <Select value={sortOrder} onValueChange={(value: "most" | "least") => setSortOrder(value)}>
-                <SelectTrigger className="w-[180px] h-12 rounded-2xl">
-                  <SelectValue />
+              <Label className="font-nunito whitespace-nowrap">Ordenar por:</Label>
+              <Select value={sortBy} onValueChange={setSortBy}>
+                <SelectTrigger className="w-40 h-12 rounded-2xl">
+                  <SelectValue placeholder="Selecionar..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="most">Mais casos</SelectItem>
-                  <SelectItem value="least">Menos casos</SelectItem>
+                  <SelectItem value="name">Nome A-Z</SelectItem>
+                  <SelectItem value="most-cases">Mais casos</SelectItem>
+                  <SelectItem value="least-cases">Menos casos</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -298,7 +325,7 @@ const People = () => {
           <Card
             key={person.id}
             className="p-6 card-soft hover-lift rounded-3xl cursor-pointer"
-            onClick={() => openPersonModal(person)}
+            onClick={() => openPersonCases(person)}
           >
             <div className="flex flex-col items-center text-center space-y-3">
               <div className="w-16 h-16 rounded-full bg-gradient-primary flex items-center justify-center text-white font-poppins font-bold text-xl">
@@ -308,9 +335,12 @@ const People = () => {
                 <h3 className="font-poppins font-semibold text-lg mb-1 truncate">
                   {person.name}
                 </h3>
-                <Badge variant="secondary" className="rounded-full">
-                  {person.caseCount || 0} {person.caseCount === 1 ? "caso" : "casos"}
-                </Badge>
+                <div className="flex items-center justify-center gap-2">
+                  <Badge variant="secondary" className="rounded-full">
+                    {person.caseCount || 0} {person.caseCount === 1 ? "caso" : "casos"}
+                  </Badge>
+                  <Eye className="w-4 h-4 text-muted-foreground" />
+                </div>
               </div>
             </div>
           </Card>
@@ -325,94 +355,104 @@ const People = () => {
         )}
       </div>
 
-      {/* Person Detail Modal */}
-      <Dialog
-        open={!!selectedPerson && !isEditing}
-        onOpenChange={() => setSelectedPerson(null)}
-      >
-        <DialogContent className="rounded-3xl">
+      {/* Person Cases Modal */}
+      <Dialog open={isCasesModalOpen} onOpenChange={setIsCasesModalOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden rounded-3xl">
           <DialogHeader>
-            <DialogTitle className="font-poppins text-2xl">
-              Detalhes da Pessoa
-            </DialogTitle>
-          </DialogHeader>
-
-          <div className="space-y-6 py-4">
-            <div className="flex flex-col items-center text-center space-y-3">
-              <div className="w-20 h-20 rounded-full bg-gradient-primary flex items-center justify-center text-white font-poppins font-bold text-2xl">
-                {selectedPerson && getInitials(selectedPerson.name)}
+            <div className="flex items-center gap-4 mb-4">
+              <div className="w-12 h-12 rounded-full bg-gradient-primary flex items-center justify-center text-white font-poppins font-bold text-lg">
+                {selectedPerson ? getInitials(selectedPerson.name) : ""}
               </div>
-              <div>
-                <h3 className="font-poppins font-semibold text-xl mb-1">
+              <div className="flex-1">
+                <DialogTitle className="font-poppins text-xl">
                   {selectedPerson?.name}
-                </h3>
-                <Badge variant="secondary" className="rounded-full">
-                  {selectedPerson?.caseCount || 0}{" "}
-                  {selectedPerson?.caseCount === 1 ? "caso" : "casos"} relacionados
-                </Badge>
+                </DialogTitle>
+                <p className="text-sm text-muted-foreground font-nunito">
+                  {personCases.length} {personCases.length === 1 ? "caso relacionado" : "casos relacionados"}
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setIsEditing(true)}
+                  className="h-9 rounded-xl font-poppins"
+                >
+                  <Edit className="w-4 h-4 mr-1" />
+                  Editar
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => setIsDeleting(true)}
+                  className="h-9 rounded-xl font-poppins"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
               </div>
             </div>
+          </DialogHeader>
 
-            {personCases.length > 0 && (
-              <div className="space-y-3">
-                <Label className="font-poppins text-sm">Casos Relacionados:</Label>
-                <div className="space-y-2 max-h-64 overflow-y-auto">
-                  {personCases.map((caseItem) => (
-                    <Card
-                      key={caseItem.id}
-                      className="p-4 hover:bg-accent/50 cursor-pointer transition-colors rounded-2xl"
-                      onClick={() => {
-                        setSelectedPerson(null);
-                        navigate("/casos");
-                      }}
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <FileText className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                            <p className="font-poppins font-medium text-sm truncate">
-                              {caseItem.requester?.name}
-                            </p>
-                          </div>
-                          <p className="text-xs text-muted-foreground">
-                            Sobre: {caseItem.related_person?.name}
-                          </p>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {format(new Date(caseItem.created_at), "dd/MM/yyyy", {
-                              locale: ptBR,
-                            })}
-                          </p>
-                        </div>
-                        <Badge
-                          variant={caseItem.is_resolved ? "default" : "secondary"}
-                          className="rounded-full text-xs flex-shrink-0"
-                        >
-                          {caseItem.is_resolved ? "✓" : "⏳"}
-                        </Badge>
-                      </div>
-                    </Card>
-                  ))}
+          <div className="overflow-y-auto max-h-[calc(80vh-200px)] space-y-3">
+            {personCases.map((caseItem) => (
+              <Card
+                key={caseItem.id}
+                className="p-4 card-soft rounded-2xl"
+              >
+                <div className="space-y-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-poppins font-semibold text-base mb-1 truncate">
+                        {caseItem.requester?.name || "Desconhecido"}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Sobre: {caseItem.related_person?.name || "Desconhecido"}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {getCaseStatusIcon(caseItem.is_resolved)}
+                      <Badge
+                        variant={caseItem.is_resolved ? "default" : "secondary"}
+                        className="rounded-full"
+                      >
+                        {caseItem.is_resolved ? "Resolvido" : "Pendente"}
+                      </Badge>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-1">
+                    {caseItem.vision_1 && (
+                      <p className="text-xs text-muted-foreground line-clamp-2">
+                        <span className="font-medium">Visão 1:</span> {caseItem.vision_1}
+                      </p>
+                    )}
+                    {caseItem.vision_2 && (
+                      <p className="text-xs text-muted-foreground line-clamp-2">
+                        <span className="font-medium">Visão 2:</span> {caseItem.vision_2}
+                      </p>
+                    )}
+                    {caseItem.resolution_comment && (
+                      <p className="text-xs text-muted-foreground line-clamp-2">
+                        <span className="font-medium">Resolução:</span> {caseItem.resolution_comment}
+                      </p>
+                    )}
+                  </div>
+                  
+                  <p className="text-xs text-muted-foreground font-nunito">
+                    {format(new Date(caseItem.created_at), "dd 'de' MMMM 'de' yyyy", {
+                      locale: ptBR,
+                    })}
+                  </p>
                 </div>
+              </Card>
+            ))}
+            
+            {personCases.length === 0 && (
+              <div className="text-center py-8">
+                <UserCircle2 className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
+                <p className="text-muted-foreground font-nunito">
+                  Nenhum caso relacionado encontrado
+                </p>
               </div>
             )}
-          </div>
-
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={() => setIsEditing(true)}
-              className="flex-1 h-11 rounded-2xl font-poppins"
-            >
-              <Edit className="w-4 h-4 mr-2" />
-              Editar Nome
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={() => setIsDeleting(true)}
-              className="h-11 rounded-2xl font-poppins"
-            >
-              <Trash2 className="w-4 h-4" />
-            </Button>
           </div>
         </DialogContent>
       </Dialog>
