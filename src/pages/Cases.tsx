@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -50,6 +51,7 @@ interface Case {
 }
 
 const Cases = () => {
+  const [searchParams] = useSearchParams();
   const [cases, setCases] = useState<Case[]>([]);
   const [people, setPeople] = useState<Person[]>([]);
   const [selectedCase, setSelectedCase] = useState<Case | null>(null);
@@ -103,6 +105,17 @@ const Cases = () => {
     fetchCases();
     fetchPeople();
   }, []);
+
+  // Open case from URL parameter
+  useEffect(() => {
+    const caseId = searchParams.get("id");
+    if (caseId && cases.length > 0) {
+      const caseToOpen = cases.find((c) => c.id === caseId);
+      if (caseToOpen) {
+        openCaseModal(caseToOpen);
+      }
+    }
+  }, [searchParams, cases]);
 
   const handleMarkResolved = async (caseItem: Case) => {
     const { error } = await supabase
@@ -177,9 +190,12 @@ const Cases = () => {
   };
 
   const openCaseModal = (caseItem: Case) => {
+    // Reset all modal states first
+    setIsEditing(false);
+    setIsDeleting(false);
+    // Then set the selected case
     setSelectedCase(caseItem);
     setEditForm(caseItem);
-    setIsEditing(false);
   };
 
   const pendingCases = cases.filter((c) => !c.is_resolved);
