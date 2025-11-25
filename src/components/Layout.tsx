@@ -2,6 +2,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Home, PlusCircle, FolderOpen, Users, Moon, Sun, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
+import logo from "@/assets/logo.png";
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
   const location = useLocation();
@@ -45,9 +46,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
             <Link to="/" className="flex items-center gap-3 group">
-              <div className="w-10 h-10 rounded-2xl bg-gradient-primary flex items-center justify-center group-hover:scale-110 transition-transform">
-                <span className="text-xl">🌸</span>
-              </div>
+              <img src={logo} alt="Kokuhito Logo" className="w-10 h-10 object-contain" />
               <span className="font-poppins font-bold text-xl hidden sm:block">
                 Kokuhito
               </span>
