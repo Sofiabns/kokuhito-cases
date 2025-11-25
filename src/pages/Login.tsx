@@ -10,7 +10,7 @@ const Login = () => {
   const navigate = useNavigate();
 
   // Senha padrão (pode ser alterada no código)
-  const CORRECT_PASSWORD = "kokuhito123";
+  const CORRECT_PASSWORD = "kokuhitorh123";
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
