@@ -1,9 +1,17 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -22,7 +30,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { UserCircle2, Edit, Trash2, Plus, Search } from "lucide-react";
+import { UserCircle2, Edit, Trash2, Plus, Search, FileText } from "lucide-react";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 interface Person {
   id: string;
@@ -31,15 +41,30 @@ interface Person {
   caseCount?: number;
 }
 
+interface Case {
+  id: string;
+  requester_id: string;
+  related_person_id: string;
+  vision_1: string | null;
+  vision_2: string | null;
+  resolution_comment: string | null;
+  is_resolved: boolean;
+  created_at: string;
+  requester?: Person;
+  related_person?: Person;
+}
+
 const People = () => {
+  const navigate = useNavigate();
   const [people, setPeople] = useState<Person[]>([]);
   const [filteredPeople, setFilteredPeople] = useState<Person[]>([]);
   const [selectedPerson, setSelectedPerson] = useState<Person | null>(null);
+  const [personCases, setPersonCases] = useState<Case[]>([]);
   const [isAdding, setIsAdding] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [minCases, setMinCases] = useState(0);
+  const [sortOrder, setSortOrder] = useState<"most" | "least">("most");
   const [editForm, setEditForm] = useState({ name: "" });
 
   const fetchPeople = async () => {
@@ -85,12 +110,15 @@ const People = () => {
       );
     }
 
-    if (minCases > 0) {
-      filtered = filtered.filter((p) => (p.caseCount || 0) >= minCases);
-    }
+    // Sort by case count
+    filtered = [...filtered].sort((a, b) => {
+      const countA = a.caseCount || 0;
+      const countB = b.caseCount || 0;
+      return sortOrder === "most" ? countB - countA : countA - countB;
+    });
 
     setFilteredPeople(filtered);
-  }, [searchTerm, minCases, people]);
+  }, [searchTerm, sortOrder, people]);
 
   const handleAdd = async () => {
     if (!editForm.name.trim()) {
@@ -171,9 +199,40 @@ const People = () => {
     }
   };
 
-  const openPersonModal = (person: Person) => {
+  const openPersonModal = async (person: Person) => {
     setSelectedPerson(person);
     setEditForm({ name: person.name });
+    
+    // Fetch cases related to this person
+    const { data: casesData } = await supabase
+      .from("cases")
+      .select("*")
+      .or(`requester_id.eq.${person.id},related_person_id.eq.${person.id}`)
+      .order("created_at", { ascending: false });
+
+    if (casesData) {
+      // Fetch all people for names
+      const peopleIds = new Set<string>();
+      casesData.forEach((c) => {
+        peopleIds.add(c.requester_id);
+        peopleIds.add(c.related_person_id);
+      });
+
+      const { data: peopleData } = await supabase
+        .from("people")
+        .select("*")
+        .in("id", Array.from(peopleIds));
+
+      const peopleMap = new Map(peopleData?.map((p) => [p.id, p]) || []);
+
+      const casesWithNames = casesData.map((c) => ({
+        ...c,
+        requester: peopleMap.get(c.requester_id),
+        related_person: peopleMap.get(c.related_person_id),
+      }));
+
+      setPersonCases(casesWithNames);
+    }
   };
 
   const getInitials = (name: string) => {
@@ -208,14 +267,16 @@ const People = () => {
           </div>
           <div className="flex gap-4 items-center">
             <div className="flex items-center gap-2">
-              <Label className="font-nunito whitespace-nowrap">Min. casos:</Label>
-              <Input
-                type="number"
-                min="0"
-                value={minCases}
-                onChange={(e) => setMinCases(parseInt(e.target.value) || 0)}
-                className="w-20 h-12 rounded-2xl"
-              />
+              <Label className="font-nunito whitespace-nowrap">Ordenar:</Label>
+              <Select value={sortOrder} onValueChange={(value: "most" | "least") => setSortOrder(value)}>
+                <SelectTrigger className="w-[180px] h-12 rounded-2xl">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="most">Mais casos</SelectItem>
+                  <SelectItem value="least">Menos casos</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <Button
               onClick={() => {
@@ -291,6 +352,49 @@ const People = () => {
                 </Badge>
               </div>
             </div>
+
+            {personCases.length > 0 && (
+              <div className="space-y-3">
+                <Label className="font-poppins text-sm">Casos Relacionados:</Label>
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {personCases.map((caseItem) => (
+                    <Card
+                      key={caseItem.id}
+                      className="p-4 hover:bg-accent/50 cursor-pointer transition-colors rounded-2xl"
+                      onClick={() => {
+                        setSelectedPerson(null);
+                        navigate("/casos");
+                      }}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <FileText className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                            <p className="font-poppins font-medium text-sm truncate">
+                              {caseItem.requester?.name}
+                            </p>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            Sobre: {caseItem.related_person?.name}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {format(new Date(caseItem.created_at), "dd/MM/yyyy", {
+                              locale: ptBR,
+                            })}
+                          </p>
+                        </div>
+                        <Badge
+                          variant={caseItem.is_resolved ? "default" : "secondary"}
+                          className="rounded-full text-xs flex-shrink-0"
+                        >
+                          {caseItem.is_resolved ? "✓" : "⏳"}
+                        </Badge>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="flex gap-2">
