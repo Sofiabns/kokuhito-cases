@@ -363,7 +363,7 @@ const People = () => {
                       className="p-4 hover:bg-accent/50 cursor-pointer transition-colors rounded-2xl"
                       onClick={() => {
                         setSelectedPerson(null);
-                        navigate("/casos");
+                        navigate(`/casos?id=${caseItem.id}`);
                       }}
                     >
                       <div className="flex items-start justify-between gap-2">
