@@ -68,12 +68,12 @@ const Login = () => {
             className="w-full h-12 rounded-2xl font-poppins font-semibold bg-gradient-primary hover:opacity-90 transition-all"
             disabled={isLoading}
           >
-            {isLoading ? "Entrando..." : "Entrar ✨"}
+            {isLoading ? "Entrando..." : "Entrar "}
           </Button>
         </form>
 
         <p className="text-center text-sm text-muted-foreground mt-6">
-          Feito com carinho 💙
+          
         </p>
       </div>
     </div>
