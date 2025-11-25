@@ -21,14 +21,14 @@ const Login = () => {
       if (password === CORRECT_PASSWORD) {
         localStorage.setItem("kokuhito-auth", "true");
         toast({
-          title: "Bem-vindo! 💙",
+          title: "Bem-vindo, Kokuhito!",
           description: "Login realizado com sucesso",
         });
         navigate("/");
       } else {
         toast({
-          title: "Hmm... senha errada 😅",
-          description: "Tenta de novo!",
+          title: "Senha errada",
+          description: "Tente Novamente!",
           variant: "destructive",
         });
         setPassword("");
@@ -56,7 +56,7 @@ const Login = () => {
           <div className="space-y-2">
             <Input
               type="password"
-              placeholder="Senha"
+              placeholder="Digite a senha"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="h-12 rounded-2xl border-2"
