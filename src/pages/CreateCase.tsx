@@ -28,7 +28,7 @@ const CreateCase = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     requester_id: "",
-    related_person_id: "",
+    related_person: "",
     vision_1: "",
     vision_2: "",
     resolution_comment: "",
@@ -59,7 +59,7 @@ const CreateCase = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.requester_id || !formData.related_person_id) {
+    if (!formData.requester_id || !formData.related_person) {
       toast({
         title: "Ops! 😅",
         description: "Preencha os campos obrigatórios",
@@ -73,7 +73,7 @@ const CreateCase = () => {
     const { error } = await supabase.from("cases").insert([
       {
         requester_id: formData.requester_id,
-        related_person_id: formData.related_person_id,
+        related_person: formData.related_person,
         vision_1: formData.vision_1 || null,
         vision_2: formData.vision_2 || null,
         resolution_comment: formData.resolution_comment || null,
@@ -147,9 +147,9 @@ const CreateCase = () => {
           <div className="space-y-2">
             <Label className="font-poppins">Pessoa relacionada</Label>
             <Select
-              value={formData.related_person_id}
+              value={formData.related_person}
               onValueChange={(value) =>
-                setFormData({ ...formData, related_person_id: value })
+                setFormData({ ...formData, related_person: value })
               }
             >
               <SelectTrigger className="h-12 rounded-2xl">

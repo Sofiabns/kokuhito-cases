@@ -39,7 +39,7 @@ interface Person {
 interface Case {
   id: string;
   requester_id: string;
-  related_person_id: string;
+  related_person: string;
   vision_1: string | null;
   vision_2: string | null;
   resolution_comment: string | null;
@@ -47,7 +47,7 @@ interface Case {
   created_at: string;
   updated_at: string;
   requester?: Person;
-  related_person?: Person;
+  relatedPerson?: Person;
 }
 
 const Cases = () => {
@@ -78,7 +78,7 @@ const Cases = () => {
       const peopleIds = new Set<string>();
       data?.forEach((c) => {
         peopleIds.add(c.requester_id);
-        peopleIds.add(c.related_person_id);
+        peopleIds.add(c.related_person);
       });
 
       const { data: peopleData } = await supabase
@@ -91,7 +91,7 @@ const Cases = () => {
       const casesWithNames = data?.map((c) => ({
         ...c,
         requester: peopleMap.get(c.requester_id),
-        related_person: peopleMap.get(c.related_person_id),
+        relatedPerson: peopleMap.get(c.related_person),
       }));
 
       setCases(casesWithNames || []);
@@ -234,7 +234,7 @@ const Cases = () => {
               {caseItem.requester?.name || "Desconhecido"}
             </p>
             <p className="text-sm text-muted-foreground">
-              Sobre: {caseItem.related_person?.name || "Desconhecido"}
+              Sobre: {caseItem.relatedPerson?.name || "Desconhecido"}
             </p>
           </div>
           <Badge
@@ -337,7 +337,7 @@ const Cases = () => {
                 Pessoa Relacionada
               </Label>
               <p className="font-nunito text-lg">
-                {selectedCase?.related_person?.name || "Desconhecido"}
+                {selectedCase?.relatedPerson?.name || "Desconhecido"}
               </p>
             </div>
 
