@@ -64,7 +64,7 @@ const People = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [sortOrder, setSortOrder] = useState<"most" | "least" | "az" | "za">("most");
+  const [sortOrder, setSortOrder] = useState<"most" | "least">("most");
   const [editForm, setEditForm] = useState({ name: "" });
 
   const fetchPeople = async () => {
@@ -110,28 +110,11 @@ const People = () => {
       );
     }
 
-    // Sort based on selected order
+    // Sort by case count
     filtered = [...filtered].sort((a, b) => {
-      switch (sortOrder) {
-        case "most": {
-          const countA = a.caseCount || 0;
-          const countB = b.caseCount || 0;
-          return countB - countA;
-        }
-        case "least": {
-          const countA = a.caseCount || 0;
-          const countB = b.caseCount || 0;
-          return countA - countB;
-        }
-        case "az": {
-          return a.name.localeCompare(b.name, "pt-BR");
-        }
-        case "za": {
-          return b.name.localeCompare(a.name, "pt-BR");
-        }
-        default:
-          return 0;
-      }
+      const countA = a.caseCount || 0;
+      const countB = b.caseCount || 0;
+      return sortOrder === "most" ? countB - countA : countA - countB;
     });
 
     setFilteredPeople(filtered);
@@ -285,15 +268,13 @@ const People = () => {
           <div className="flex gap-4 items-center">
             <div className="flex items-center gap-2">
               <Label className="font-nunito whitespace-nowrap">Ordenar:</Label>
-              <Select value={sortOrder} onValueChange={(value: "most" | "least" | "az" | "za") => setSortOrder(value)}>
+              <Select value={sortOrder} onValueChange={(value: "most" | "least") => setSortOrder(value)}>
                 <SelectTrigger className="w-[180px] h-12 rounded-2xl">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="most">Mais casos</SelectItem>
                   <SelectItem value="least">Menos casos</SelectItem>
-                  <SelectItem value="az">A → Z</SelectItem>
-                  <SelectItem value="za">Z → A</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -488,7 +469,7 @@ const People = () => {
             <AlertDialogTitle className="font-poppins">
               Tem certeza?
             </AlertDialogTitle>
-          <AlertDialogDescription className="font-nunito">
+            <AlertDialogDescription className="font-nunito">
               {selectedPerson && selectedPerson.caseCount! > 0
                 ? "Esta pessoa tem casos relacionados. Excluir a pessoa também excluirá os casos! 🗑️"
                 : "Isso não pode ser desfeito! 🗑️"}
