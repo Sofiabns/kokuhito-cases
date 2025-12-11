@@ -17,10 +17,6 @@ const Login = () => {
     e.preventDefault();
     setIsLoading(true);
 
-    console.log("Senha digitada:", password);
-    console.log("Senha correta:", CORRECT_PASSWORD);
-    console.log("São iguais?", password === CORRECT_PASSWORD);
-
     setTimeout(() => {
       if (password === CORRECT_PASSWORD) {
         localStorage.setItem("kokuhito-auth", "true");
