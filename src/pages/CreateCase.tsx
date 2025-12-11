@@ -99,7 +99,7 @@ const CreateCase = () => {
   };
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
+    <div className="max-w-4xl mx-auto space-y-8">
       <div className="flex items-center gap-4">
         <Button
           variant="ghost"
@@ -112,9 +112,9 @@ const CreateCase = () => {
         </Button>
       </div>
 
-      <div>
-        <h1 className="text-3xl font-poppins font-bold mb-2">Criar Novo Caso</h1>
-        <p className="text-muted-foreground font-nunito">
+      <div className="text-center space-y-4">
+        <h1 className="text-4xl font-poppins font-bold">Criar Novo Caso</h1>
+        <p className="text-lg text-muted-foreground font-nunito max-w-2xl mx-auto">
           Preencha as informações abaixo para registrar um novo caso
         </p>
       </div>

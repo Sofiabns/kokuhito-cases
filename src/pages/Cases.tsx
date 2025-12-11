@@ -282,10 +282,10 @@ const Cases = () => {
   );
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-3xl font-poppins font-bold mb-2">Casos</h1>
-        <p className="text-muted-foreground font-nunito">
+    <div className="space-y-8">
+      <div className="text-center space-y-4">
+        <h1 className="text-4xl font-poppins font-bold">Casos</h1>
+        <p className="text-lg text-muted-foreground font-nunito max-w-2xl mx-auto">
           Visualize e gerencie todos os casos registrados
         </p>
       </div>

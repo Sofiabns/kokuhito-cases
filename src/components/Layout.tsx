@@ -41,19 +41,19 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   return (
     <div className="min-h-screen bg-background">
       {/* Top Navigation */}
-      <header className="sticky top-0 z-50 bg-card/80 backdrop-blur-lg border-b border-border">
-        <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between h-16">
+      <header className="sticky top-0 z-50 bg-card/95 backdrop-blur-lg border-b border-border/50 shadow-sm">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="flex items-center justify-between h-18">
             {/* Logo */}
-            <Link to="/" className="flex items-center gap-3 group">
-              <img src={logo} alt="Kokuhito Logo" className="w-10 h-10 object-contain" />
-              <span className="font-poppins font-bold text-xl hidden sm:block">
+            <Link to="/" className="flex items-center gap-4 group transition-transform hover:scale-105">
+              <img src={logo} alt="Kokuhito Logo" className="w-12 h-12 object-contain rounded-xl" />
+              <span className="font-poppins font-bold text-2xl hidden sm:block">
                 Kokuhito
               </span>
             </Link>
 
             {/* Navigation */}
-            <nav className="flex items-center gap-2">
+            <nav className="flex items-center gap-3">
               {navItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = location.pathname === item.path;
@@ -61,14 +61,14 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                   <Link key={item.path} to={item.path}>
                     <Button
                       variant={isActive ? "default" : "ghost"}
-                      size="sm"
-                      className={`rounded-xl gap-2 ${
+                      size="default"
+                      className={`rounded-2xl gap-3 px-4 py-2 font-medium transition-all duration-200 ${
                         isActive
-                          ? "bg-primary text-primary-foreground"
-                          : "hover:bg-accent"
+                          ? "bg-primary text-primary-foreground shadow-md"
+                          : "hover:bg-accent hover:scale-105"
                       }`}
                     >
-                      <Icon className="w-4 h-4" />
+                      <Icon className="w-5 h-5" />
                       <span className="hidden md:inline">{item.label}</span>
                     </Button>
                   </Link>
@@ -78,25 +78,25 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
               {/* Theme Toggle */}
               <Button
                 variant="ghost"
-                size="sm"
+                size="default"
                 onClick={toggleTheme}
-                className="rounded-xl"
+                className="rounded-2xl px-3 hover:bg-accent hover:scale-105 transition-all duration-200"
               >
                 {isDark ? (
-                  <Sun className="w-4 h-4" />
+                  <Sun className="w-5 h-5" />
                 ) : (
-                  <Moon className="w-4 h-4" />
+                  <Moon className="w-5 h-5" />
                 )}
               </Button>
 
               {/* Logout */}
               <Button
                 variant="ghost"
-                size="sm"
+                size="default"
                 onClick={handleLogout}
-                className="rounded-xl text-destructive hover:text-destructive hover:bg-destructive/10"
+                className="rounded-2xl px-3 text-destructive hover:text-destructive hover:bg-destructive/10 hover:scale-105 transition-all duration-200"
               >
-                <LogOut className="w-4 h-4" />
+                <LogOut className="w-5 h-5" />
               </Button>
             </nav>
           </div>
@@ -104,7 +104,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
       </header>
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-8">{children}</main>
+      <main className="max-w-7xl mx-auto px-6 py-12">{children}</main>
     </div>
   );
 };
