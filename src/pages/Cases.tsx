@@ -57,6 +57,7 @@ const Cases = () => {
   const [selectedCase, setSelectedCase] = useState<Case | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isDeletingCase, setIsDeletingCase] = useState(false);
   const [editForm, setEditForm] = useState<Partial<Case>>({});
   const [activeTab, setActiveTab] = useState("pending");
   const caseIdRef = useRef<string | null>(null);
@@ -90,6 +91,7 @@ const Cases = () => {
 
       const casesWithNames = data?.map((c) => ({
         ...c,
+        relatedPersonId: c.related_person,
         requester: peopleMap.get(c.requester_id),
         relatedPerson: peopleMap.get(c.related_person),
       }));
@@ -111,18 +113,22 @@ const Cases = () => {
   // Handle case navigation from URL
   useEffect(() => {
     const caseId = searchParams.get("id");
-    
+
     if (caseId && cases.length > 0) {
       const caseToOpen = cases.find((c) => c.id === caseId);
       if (caseToOpen && caseIdRef.current !== caseId) {
         // Automatically switch to the appropriate tab
         setActiveTab(caseToOpen.is_resolved ? "resolved" : "pending");
-        
+
         // Open the case modal
         openCaseModal(caseToOpen);
         caseIdRef.current = caseId;
+      } else if (!caseToOpen && caseIdRef.current !== caseId) {
+        // Case not found, clear URL
+        setSearchParams({});
+        caseIdRef.current = null;
       }
-    } else if (!caseId) {
+    } else if (!caseId && caseIdRef.current !== null) {
       // Reset when no case ID in URL
       setSelectedCase(null);
       caseIdRef.current = null;
@@ -159,7 +165,7 @@ const Cases = () => {
 
     const { error } = await supabase
       .from("cases")
-      .update(editForm)
+      .update(editForm as any)
       .eq("id", selectedCase.id);
 
     if (error) {
@@ -183,30 +189,47 @@ const Cases = () => {
   };
 
   const handleDelete = async () => {
-    if (!selectedCase) return;
+    if (!selectedCase || isDeletingCase) return;
 
-    const { error } = await supabase
-      .from("cases")
-      .delete()
-      .eq("id", selectedCase.id);
+    setIsDeletingCase(true);
 
-    if (error) {
+    try {
+      const { error } = await supabase
+        .from("cases")
+        .delete()
+        .eq("id", selectedCase.id);
+
+      if (error) {
+        console.error("Erro ao deletar caso:", error);
+        toast({
+          title: "Erro ao excluir caso",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        console.log("Caso deletado com sucesso:", selectedCase.id);
+        toast({
+          title: "Caso excluído 🗑️",
+          description: "O caso foi removido com sucesso",
+        });
+
+        // Close modal and refresh data
+        setIsDeleting(false);
+        setSelectedCase(null);
+        setSearchParams({});
+
+        // Fetch updated cases list
+        fetchCases();
+      }
+    } catch (error) {
+      console.error("Erro inesperado ao deletar:", error);
       toast({
-        title: "Erro ao excluir caso",
-        description: error.message,
+        title: "Erro inesperado",
+        description: "Ocorreu um erro inesperado ao excluir o caso",
         variant: "destructive",
       });
-    } else {
-      toast({
-        title: "Caso excluído 🗑️",
-        description: "O caso foi removido com sucesso",
-      });
-      fetchCases();
-      setIsDeleting(false);
-      setSelectedCase(null);
-      
-      // Update URL to remove case ID
-      setSearchParams({});
+    } finally {
+      setIsDeletingCase(false);
     }
   };
 
@@ -216,7 +239,12 @@ const Cases = () => {
     setIsDeleting(false);
     // Then set the selected case
     setSelectedCase(caseItem);
-    setEditForm(caseItem);
+    setEditForm({
+      vision_1: caseItem.vision_1,
+      vision_2: caseItem.vision_2,
+      resolution_comment: caseItem.resolution_comment,
+      is_resolved: caseItem.is_resolved,
+    });
   };
 
   const pendingCases = cases.filter((c) => !c.is_resolved);
@@ -304,114 +332,120 @@ const Cases = () => {
       </Tabs>
 
       {/* Case Detail Modal */}
-      <Dialog open={!!selectedCase && !isEditing} onOpenChange={() => {
-        setSelectedCase(null);
-        setSearchParams({});
-      }}>
-        <DialogContent className="max-w-2xl rounded-3xl">
-          <DialogHeader>
-            <DialogTitle className="font-poppins text-2xl">
-              Detalhes do Caso
-            </DialogTitle>
-            <DialogDescription>
-              {format(
-                new Date(selectedCase?.created_at || new Date()),
-                "dd 'de' MMMM 'de' yyyy 'às' HH:mm",
-                { locale: ptBR }
+      {selectedCase && (
+        <Dialog open={!isEditing} onOpenChange={() => {
+          setSelectedCase(null);
+          setSearchParams({});
+        }}>
+          <DialogContent className="max-w-2xl rounded-3xl">
+            <DialogHeader>
+              <DialogTitle className="font-poppins text-2xl">
+                Detalhes do Caso
+              </DialogTitle>
+              <DialogDescription>
+                {format(
+                  new Date(selectedCase.created_at),
+                  "dd 'de' MMMM 'de' yyyy 'às' HH:mm",
+                  { locale: ptBR }
+                )}
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-4">
+              <div>
+                <Label className="font-poppins text-sm text-muted-foreground">
+                  Solicitante
+                </Label>
+                <p className="font-nunito text-lg">
+                  {selectedCase.requester?.name || "Desconhecido"}
+                </p>
+              </div>
+
+              <div>
+                <Label className="font-poppins text-sm text-muted-foreground">
+                  Pessoa Relacionada
+                </Label>
+                <p className="font-nunito text-lg">
+                  {selectedCase.relatedPerson?.name || "Desconhecido"}
+                </p>
+              </div>
+
+              {selectedCase.vision_1 && (
+                <div>
+                  <Label className="font-poppins text-sm text-muted-foreground">
+                    Visão 1
+                  </Label>
+                  <p className="font-nunito">{selectedCase.vision_1}</p>
+                </div>
               )}
-            </DialogDescription>
-          </DialogHeader>
 
-          <div className="space-y-4 py-4">
-            <div>
-              <Label className="font-poppins text-sm text-muted-foreground">
-                Solicitante
-              </Label>
-              <p className="font-nunito text-lg">
-                {selectedCase?.requester?.name || "Desconhecido"}
-              </p>
+              {selectedCase.vision_2 && (
+                <div>
+                  <Label className="font-poppins text-sm text-muted-foreground">
+                    Visão 2
+                  </Label>
+                  <p className="font-nunito">{selectedCase.vision_2}</p>
+                </div>
+              )}
+
+              {selectedCase.resolution_comment && (
+                <div>
+                  <Label className="font-poppins text-sm text-muted-foreground">
+                    Resolução / Comentário
+                  </Label>
+                  <p className="font-nunito">{selectedCase.resolution_comment}</p>
+                </div>
+              )}
+
+              <div className="flex items-center gap-2">
+                <Badge
+                  variant={selectedCase.is_resolved ? "default" : "secondary"}
+                  className="rounded-full"
+                >
+                  {selectedCase.is_resolved ? "Resolvido" : "Pendente"}
+                </Badge>
+              </div>
             </div>
 
-            <div>
-              <Label className="font-poppins text-sm text-muted-foreground">
-                Pessoa Relacionada
-              </Label>
-              <p className="font-nunito text-lg">
-                {selectedCase?.relatedPerson?.name || "Desconhecido"}
-              </p>
-            </div>
-
-            {selectedCase?.vision_1 && (
-              <div>
-                <Label className="font-poppins text-sm text-muted-foreground">
-                  Visão 1
-                </Label>
-                <p className="font-nunito">{selectedCase.vision_1}</p>
-              </div>
-            )}
-
-            {selectedCase?.vision_2 && (
-              <div>
-                <Label className="font-poppins text-sm text-muted-foreground">
-                  Visão 2
-                </Label>
-                <p className="font-nunito">{selectedCase.vision_2}</p>
-              </div>
-            )}
-
-            {selectedCase?.resolution_comment && (
-              <div>
-                <Label className="font-poppins text-sm text-muted-foreground">
-                  Resolução / Comentário
-                </Label>
-                <p className="font-nunito">{selectedCase.resolution_comment}</p>
-              </div>
-            )}
-
-            <div className="flex items-center gap-2">
-              <Badge
-                variant={selectedCase?.is_resolved ? "default" : "secondary"}
-                className="rounded-full"
-              >
-                {selectedCase?.is_resolved ? "Resolvido" : "Pendente"}
-              </Badge>
-            </div>
-          </div>
-
-          <div className="flex gap-2">
-            {!selectedCase?.is_resolved && (
+            <div className="flex gap-2">
+              {!selectedCase.is_resolved && (
+                <Button
+                  onClick={() => handleMarkResolved(selectedCase)}
+                  className="flex-1 h-11 rounded-2xl bg-green-500 hover:bg-green-600 font-poppins"
+                >
+                  <CheckCircle2 className="w-4 h-4 mr-2" />
+                  Marcar como Resolvido
+                </Button>
+              )}
               <Button
-                onClick={() => selectedCase && handleMarkResolved(selectedCase)}
-                className="flex-1 h-11 rounded-2xl bg-green-500 hover:bg-green-600 font-poppins"
+                variant="outline"
+                onClick={() => setIsEditing(true)}
+                className="h-11 rounded-2xl font-poppins"
               >
-                <CheckCircle2 className="w-4 h-4 mr-2" />
-                Marcar como Resolvido
+                <Edit className="w-4 h-4 mr-2" />
+                Editar
               </Button>
-            )}
-            <Button
-              variant="outline"
-              onClick={() => setIsEditing(true)}
-              className="h-11 rounded-2xl font-poppins"
-            >
-              <Edit className="w-4 h-4 mr-2" />
-              Editar
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={() => setIsDeleting(true)}
-              className="h-11 rounded-2xl font-poppins"
-            >
-              <Trash2 className="w-4 h-4" />
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+              <Button
+                variant="destructive"
+                onClick={handleDelete}
+                disabled={isDeletingCase}
+                className="h-11 rounded-2xl font-poppins"
+              >
+                {isDeletingCase ? "Excluindo..." : <Trash2 className="w-4 h-4" />}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Edit Modal */}
       <Dialog open={isEditing} onOpenChange={() => setIsEditing(false)}>
         <DialogContent className="max-w-2xl rounded-3xl">
           <DialogHeader>
             <DialogTitle className="font-poppins text-2xl">Editar Caso</DialogTitle>
+            <DialogDescription>
+              Faça alterações nos detalhes do caso selecionado.
+            </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
@@ -495,9 +529,10 @@ const Cases = () => {
             <AlertDialogCancel className="rounded-2xl">Cancelar</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
+              disabled={isDeletingCase}
               className="rounded-2xl bg-destructive hover:bg-destructive/90"
             >
-              Excluir
+              {isDeletingCase ? "Excluindo..." : "Excluir"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

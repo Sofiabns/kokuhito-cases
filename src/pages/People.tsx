@@ -44,14 +44,14 @@ interface Person {
 interface Case {
   id: string;
   requester_id: string;
-  related_person_id: string;
+  relatedPersonId: string;
   vision_1: string | null;
   vision_2: string | null;
   resolution_comment: string | null;
   is_resolved: boolean;
   created_at: string;
   requester?: Person;
-  related_person?: Person;
+  relatedPerson?: Person;
 }
 
 const People = () => {
@@ -88,7 +88,7 @@ const People = () => {
     const peopleWithCounts = peopleData?.map((person) => {
       const count =
         casesData?.filter(
-          (c) => c.requester_id === person.id || c.related_person_id === person.id
+          (c) => c.requester_id === person.id || c.related_person === person.id
         ).length || 0;
       return { ...person, caseCount: count };
     });
@@ -177,25 +177,37 @@ const People = () => {
   const handleDelete = async () => {
     if (!selectedPerson) return;
 
-    const { error } = await supabase
-      .from("people")
-      .delete()
-      .eq("id", selectedPerson.id);
+    try {
+      const { error } = await supabase
+        .from("people")
+        .delete()
+        .eq("id", selectedPerson.id);
 
-    if (error) {
+      if (error) {
+        console.error("Erro ao deletar pessoa:", error);
+        toast({
+          title: "Erro ao excluir pessoa",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        console.log("Pessoa deletada com sucesso:", selectedPerson.id);
+        toast({
+          title: "Pessoa excluída 🗑️",
+          description: "A pessoa foi removida com sucesso",
+        });
+
+        // Close modal and refresh data
+        setSelectedPerson(null);
+        fetchPeople();
+      }
+    } catch (error) {
+      console.error("Erro inesperado ao deletar:", error);
       toast({
-        title: "Erro ao excluir pessoa",
-        description: error.message,
+        title: "Erro inesperado",
+        description: "Ocorreu um erro inesperado ao excluir a pessoa",
         variant: "destructive",
       });
-    } else {
-      toast({
-        title: "Pessoa excluída 🗑️",
-        description: "A pessoa foi removida com sucesso",
-      });
-      setIsDeleting(false);
-      setSelectedPerson(null);
-      fetchPeople();
     }
   };
 
@@ -207,7 +219,7 @@ const People = () => {
     const { data: casesData } = await supabase
       .from("cases")
       .select("*")
-      .or(`requester_id.eq.${person.id},related_person_id.eq.${person.id}`)
+      .or(`requester_id.eq.${person.id},related_person.eq.${person.id}`)
       .order("created_at", { ascending: false });
 
     if (casesData) {
@@ -215,7 +227,7 @@ const People = () => {
       const peopleIds = new Set<string>();
       casesData.forEach((c) => {
         peopleIds.add(c.requester_id);
-        peopleIds.add(c.related_person_id);
+        peopleIds.add(c.related_person);
       });
 
       const { data: peopleData } = await supabase
@@ -227,8 +239,9 @@ const People = () => {
 
       const casesWithNames = casesData.map((c) => ({
         ...c,
+        relatedPersonId: c.related_person,
         requester: peopleMap.get(c.requester_id),
-        related_person: peopleMap.get(c.related_person_id),
+        relatedPerson: peopleMap.get(c.related_person),
       }));
 
       setPersonCases(casesWithNames);
@@ -375,7 +388,7 @@ const People = () => {
                             </p>
                           </div>
                           <p className="text-xs text-muted-foreground">
-                            Sobre: {caseItem.related_person?.name}
+                            Sobre: {caseItem.relatedPerson?.name}
                           </p>
                           <p className="text-xs text-muted-foreground mt-1">
                             {format(new Date(caseItem.created_at), "dd/MM/yyyy", {
@@ -408,7 +421,8 @@ const People = () => {
             </Button>
             <Button
               variant="destructive"
-              onClick={() => setIsDeleting(true)}
+              onClick={handleDelete}
+              disabled={false}
               className="h-11 rounded-2xl font-poppins"
             >
               <Trash2 className="w-4 h-4" />
