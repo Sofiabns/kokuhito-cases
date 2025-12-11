@@ -11,7 +11,7 @@ const Login = () => {
   const navigate = useNavigate();
 
   // Senha configurada via variável de ambiente
-  const CORRECT_PASSWORD = import.meta.env.VITE_APP_PASSWORD;
+  const CORRECT_PASSWORD = import.meta.env.VITE_APP_PASSWORD || "kokuhitorh123";
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
